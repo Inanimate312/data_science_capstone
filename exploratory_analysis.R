@@ -107,3 +107,21 @@ count_phrase <- function(path, phrase) {
 
 count_phrase(ustwitter,"A computer once beat me at chess, but it was no match for me at kickboxing")
 # 3
+
+## Function to count distinct words in a file
+count_words <- function(path) {
+  con <- file(path, "r")
+  on.exit(close(con))
+  
+  out <- list()
+  i <- 1
+  
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    out[[i]] <- stringr::str_extract_all(line, "\\p{L}+")[[1]]
+    i <- i + 1
+  }
+  
+  length(unique(unlist(out)))
+}
+
+count_words(ustwitter)
