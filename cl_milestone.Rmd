@@ -1,0 +1,34 @@
+---
+title: 'Swiftkey Prediction Model: Milestone Report'
+author: "Chris Luchterhand"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose
+
+## Summary Statistics
+text here
+
+## Distribution of Word Frequency
+text here
+
+```{r words, echo=FALSE}
+# code here
+```
+
+Unigrams, bigrams, trigrams
+
+## Coverage Analysis
+text here - 50%
+text here - 90%
+
+```{r coverage, echo=FALSE}
+# code here
+```
+
+## Plan/Next Steps
