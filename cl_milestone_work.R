@@ -4,25 +4,52 @@
 
 ## Data Processing
 library(R.utils)
-library(readr)
 library(dplyr)
 library(purrr)
 library(stringr)
 library(tibble)
+library(tidyr)
+
+## Download data
+## Set URL and filepath
+url <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+zipfile <- file.path(getwd(), "Coursera-SwiftKey.zip")
+
+## Download and unzip file if not already downloaded
+if(!file.exists(zipfile)) {
+  download.file(url,
+                destfile = zipfile)
+  unzip(zipfile)
+}
 
 ## Build Corpus - Sampling 5,000 lines per file
 # Define sampling function
 sample_lines <- function(path, n = 5000) {
-  con <- file(path, "r")
-  on.exit(close(con))
-  lines <- read_lines(con)
+  lines <- readLines(
+    path,
+    warn = FALSE,
+    encoding = "UTF-8",
+    skipNul = TRUE
+  )
+  
+  lines <- iconv(
+    lines,
+    from = "UTF-8",
+    to = "UTF-8",
+    sub = ""
+  )
+  
+  lines <- lines[nzchar(lines)]
+  
   sample(lines, min(n, length(lines)))
 }
 
+
+
 paths <- list(
-  english = list.files(file.path(getwd(),"final/en-US"), full.names = TRUE)
-  german = list.files(file.path(getwd(),"final/de_DE"), full.names = TRUE)
-  finnish = list.files(file.path(getwd(), "final/fi_FI"), full.names = TRUE)
+  english = list.files(file.path(getwd(),"final/en_US"), full.names = TRUE),
+  german = list.files(file.path(getwd(),"final/de_DE"), full.names = TRUE),
+  finnish = list.files(file.path(getwd(), "final/fi_FI"), full.names = TRUE),
   russian = list.files(file.path(getwd(), "final/ru_RU"), full.names = TRUE)
 )
 
@@ -55,14 +82,15 @@ library(tokenizers)
 
 # Tokenize text into individual words
 tokens_df <- corpus %>%
-  mutate(tokens = map(text_clean, ~ tokenize_words(.x, strip_punct = TRUE))) %>%
-  select(language, file, tokens) %>%
+  mutate(tokens = map(text_clean,
+                      ~ tokenize_words(.x, strip_punct = TRUE)[[1]])) %>%
   unnest(tokens) %>%
   rename(token = tokens)
 
+
 # Build n-grams from sampled text
 build_ngrams <- function(text, n = 2) {
-  tokenizers::tokenize_ngrams(text, n = n, n_min = n, strip_punct = TRUE)[[1]]
+  tokenizers::tokenize_ngrams(text, n = n, n_min = n)[[1]]
 }
 
 ngrams_df <- corpus %>%
@@ -80,7 +108,7 @@ unigrams <- tokens_df %>%
 # Bigram frequencies
 bigrams <- ngrams_df %>%
   select(language, file, bigrams) %>%
-  unnest(bigrams) %>%
+  unnest(bigrams, keep_empty = TRUE) %>%
   rename(ngram = bigrams) %>%
   group_by(language, ngram) %>%
   summarise(freq = n(), .groups = "drop")
@@ -88,7 +116,7 @@ bigrams <- ngrams_df %>%
 # Trigram frequencies
 trigrams <- ngrams_df %>%
   select(language, file, trigrams) %>%
-  unnest(trigrams) %>%
+  unnest(trigrams, keep_empty = TRUE) %>%
   rename(ngram = trigrams) %>%
   group_by(language, ngram) %>%
   summarise(freq = n(), .groups = "drop")
@@ -135,7 +163,7 @@ language_foreign_stats <- unigrams %>%
   group_by(language) %>%
   summarise(
     total_tokens = sum(freq),
-    foreign_like = sum(freq[cyrillic & language ~= "russian"]) +
+    foreign_like = sum(freq[cyrillic & language != "russian"]) +
                   sum(freq[latin & language == "russian"]),
     foreign_prop = foreign_like / total_tokens
   )
@@ -208,7 +236,7 @@ predict_next_word <- function(history, language = "english",
 V <- unigrams %>% filter(language == "english") %>% nrow()
 
 bigram_model_smoothed <- bigrams_split %>%
-  group_by(lang, w1) %>%
+  group_by(language, w1) %>%
   mutate(prob_laplace = (freq + 1) / (sum(freq) + V)) %>%
   ungroup()
 
