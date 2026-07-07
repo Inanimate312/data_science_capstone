@@ -5,10 +5,18 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+```
 ## Purpose
+This report presents the findings of an exploratory analysis of text data from news, blogs, and Twitter. The corpus contains text in four languages: English, Finnish, German, and Russian. Ultimately, this data will be used to produce an n-gram text prediction algorithm, which predicts the next word based on user-entered text. This algorithm will be used to create a Shiny application. This exploratory analysis uses sample text from each file to identify the basic features of the corpus, including the frequency distribution of one-, two-, and three-word sequences and the number of unique words required to account for 50% and 90% of observed words in the data.
 
 ## Approach
-We select a random sample of 5,000 lines from each file. Next, we combine the sample text from each file into a corpus containing the language (English, Finnish, German, or Russian), source file name, and sampled text. 
+We first select a random sample of 5,000 lines from each file. Each file is relatively large, so using a smaller sample will give us an adequate summary of the data without requiring us to download and parse each entire file. We combine the sample text from each file into a corpus containing the language (English, Finnish, German, or Russian), source file name, and sampled text. We clean the sample data by removing malformed characters, white space, puncutation, and blank lines. We also convert all text to lowercase. These steps make it easier to identify individual words and word sequences (i.e., tokens).
 
 ```{r sample, echo=FALSE}
 library(R.utils)
@@ -56,11 +64,7 @@ read_language_sample <- function(files, language) {
 }
 
 corpus <- map2_df(paths, names(paths), read_language_sample)
-```
 
-We then clean the sample data by removing malformed characters, white space, and blank lines. We also convert all text to lowercase.
-
-```{r clean, echo=FALSE}
 corpus <- corpus %>%
   mutate(text_clean = text %>%
            str_replace_all("[\r\n]+", " ") %>%
@@ -69,7 +73,46 @@ corpus <- corpus %>%
          )
 ```
 
-We break up the cleaned sample text into individual words (i.e., tokens) and remove punctuation. The resulting dataset contains one row per token. We then generate bigrams (sequences of two words) and trigrams (sequences of three words), which will be the basis for the model that predicts the next word based on user input.
+
+## Summary statistics
+Before tokenizing the data, we first examine the number of lines and words for each language after sampling 5,000 lines for each of the three files per language. As expected, the resulting table shows there are 15,000 lines per language:
+
+```{r summary, echo=FALSE}
+language_summary <- map2_df(paths, names(paths), function(files, language) {
+  
+  line_counts <- map_int(files, ~{
+    lines <- readLines(
+      .x,
+      warn = FALSE,
+      encoding = "UTF-8",
+      skipNul = TRUE
+    )
+    
+    lines <- iconv(
+      lines,
+      from = "UTF-8",
+      to = "UTF-8",
+      sub = ""
+    )
+    
+    lines <- lines[nzchar(lines)]
+    
+    min(5000, length(lines))
+  })
+  
+  sampled_text <- corpus %>%
+    filter(language == !!language)
+  
+  tibble(
+    language = language,
+    lines = sum(line_counts),
+    words = sum(str_count(sampled_text$text_clean, "\\S+"))
+  )
+})
+language_summary
+```
+
+Next, we tokenize the data, producing a dataset containing one row per token. Tokens include unigrams (individual words), bigrams (sequences of two words) and trigrams (sequences of three words). These tokens will be the basis for the model that predicts the next word based on user input. Therefore, we examine the distribution of the frequencies of the most common tokens.
 
 ```{r token, echo=FALSE}
 library(tokenizers)
@@ -89,12 +132,7 @@ ngrams_df <- corpus %>%
     bigrams = map(text_clean, build_ngrams, n = 2),
     trigrams = map(text_clean, build_ngrams, n = 3)
   )
-```
 
-## Summary Statistics
-We examined the frequencies of unigrams (single words), bigrams, and trigrams. These frequencies will help identify common pairs and trios of words in the dataset.
-
-```{r freqs, echo=FALSE}
 # Unigram frequencies
 unigrams <- tokens_df %>%
   group_by(language, token) %>%
@@ -118,24 +156,33 @@ trigrams <- ngrams_df %>%
 ```
 
 ## Distribution of Word Frequency
-We use a log-log frequency plot to identify whether each language follows Zipf's Law (i.e., small numbers of words occur more frequently than larger numbers of words). The plot indicates that each language follows Zipf's Law.
+We use a rank-frequency plot to identify whether each language follows Zipf's Law. That is, that a small number of words occurs more frequently than larger numbers of words in each language. The plot indicates that each language follows Zipf's Law.
 
 ```{r zipf, echo=FALSE}
 library(ggplot2)
 
-unigrams %>%
+unigram_ranks <- unigrams %>%
   group_by(language) %>%
   arrange(desc(freq)) %>%
-  mutate(rank = row_number()) %>%
-  ggplot(aes(rank, freq)) +
-  geom_line() +
-  scale_y_log10() +
+  mutate(rank = row_number())
+
+ggplot(
+  unigram_ranks,
+  aes(x = rank, y = freq)
+) +
+  geom_point(alpha = 0.5, size = 0.8) +
   scale_x_log10() +
-  facet_wrap(~ language, scales = "free") +
-  labs(title = "Zipf-like Word Frequency Distribution")
+  scale_y_log10() +
+  facet_wrap(~language, scales = "free") +
+  labs(
+    title = "Word Frequency Scatterplots by Language",
+    x = "Rank (log scale)",
+    y = "Frequency (log scale)"
+  ) +
+  theme_minimal()
 ```
 
-We also examined the presence of "cross-script" tokens (i.e., Cyrillic alphabet characters in the non-Russian language files and Latin alphabet characters in the Russian language files).
+We also examined the presence of "cross-script" tokens (i.e., Cyrillic alphabet characters in the non-Russian language files and Latin alphabet characters in the Russian language files). The proportion of tokens that appear to be a foreign language is extremely low for each language, albeit slightly higher in Russian compared to other languages:
 
 ```{r cross, echo=FALSE}
 is_cyrillic <- function(x) grepl("[\u0400-\u04FF]", x)
@@ -153,10 +200,16 @@ language_foreign_stats <- unigrams %>%
                   sum(freq[latin & language == "russian"]),
     foreign_prop = foreign_like / total_tokens
   )
+
+language_foreign_stats %>%
+  mutate(
+    foreign_percent = round(100 * foreign_prop, 3)
+  ) %>%
+  select(language, foreign_percent)
 ```
 
 ## Coverage Analysis
-Next, we determine coverage: how many unique words are required to account for 50% of observed word occurrences and, separately, how many words are required to account for 90% of observed occurrences.
+Finally, we evaluated how many unique words are required to account for 50% of observed word occurrences and, separately, how many words are required to account for 90% of observed occurrences. We find that coverage varies by language, but generally, the data has the best coverage for English: approximately 21% of words are needed to account for 90% of occurrences.
 
 ```{r coverage, echo=FALSE}
 coverage_stats <- unigrams %>%
@@ -172,8 +225,15 @@ coverage_stats <- unigrams %>%
     vocab_90 = min(which(cum_prop >= 0.9)),
     total_vocab = n()
   )
+
+coverage_stats <- coverage_stats %>%
+  mutate(
+    pct_vocab_50 = round(100 * vocab_50 / total_vocab, 1),
+    pct_vocab_90 = round(100 * vocab_90 / total_vocab, 1)
+  )
+
 coverage_stats
 ```
 
 ## Plan/Next Steps
-Based on this preliminary examination, we will construct a backoff n-gram probability model that calculates the conditional probabilities for each bigram and trigram sequence (the likelihood of a word occurring given the preceding word(s)). The backoff model will start by searching for matching trigrams. If the model does not identify matching trigrams, it will "back off" to search for matching bigrams, and then search for the most frequent unigrams if no bigrams are identified. We will also incorporate 
+Based on this preliminary examination, we will construct a backoff n-gram probability model that calculates the conditional probabilities for each bigram and trigram sequence (the likelihood of a word occurring given the preceding word(s)). The backoff model will start by searching for matching trigrams. If the model does not identify matching trigrams, it will "back off" to search for matching bigrams, and then search for the most frequent unigrams if no bigrams are identified. Given the evaluation of coverage, we expect that the model will have the strongest predictive power for English-language predictions.

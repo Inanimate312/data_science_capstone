@@ -121,7 +121,68 @@ trigrams <- ngrams_df %>%
   group_by(language, ngram) %>%
   summarise(freq = n(), .groups = "drop")
 
+
+
+
+# Count lines and words sampled from each language
+language_summary <- map2_df(paths, names(paths), function(files, language) {
+  
+  line_counts <- map_int(files, ~{
+    lines <- readLines(
+      .x,
+      warn = FALSE,
+      encoding = "UTF-8",
+      skipNul = TRUE
+    )
+    
+    lines <- iconv(
+      lines,
+      from = "UTF-8",
+      to = "UTF-8",
+      sub = ""
+    )
+    
+    lines <- lines[nzchar(lines)]
+    
+    min(5000, length(lines))
+  })
+  
+  sampled_text <- corpus %>%
+    filter(language == !!language)
+  
+  tibble(
+    language = language,
+    lines = sum(line_counts),
+    words = sum(str_count(sampled_text$text_clean, "\\S+"))
+  )
+})
+language_summary
+
+
 # Plot frequencies
+### 2. Scatterplots of Frequency Distributions
+unigram_ranks <- unigrams %>%
+  group_by(language) %>%
+  arrange(desc(freq)) %>%
+  mutate(rank = row_number())
+
+ggplot(
+  unigram_ranks,
+  aes(x = rank, y = freq)
+) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  scale_x_log10() +
+  scale_y_log10() +
+  facet_wrap(~language, scales = "free") +
+  labs(
+    title = "Word Frequency Scatterplots by Language",
+    x = "Rank (log scale)",
+    y = "Frequency (log scale)"
+  ) +
+  theme_minimal()
+
+
+
 library(ggplot2)
 
 unigrams %>%
@@ -167,6 +228,16 @@ language_foreign_stats <- unigrams %>%
                   sum(freq[latin & language == "russian"]),
     foreign_prop = foreign_like / total_tokens
   )
+
+
+language_foreign_stats %>%
+  mutate(
+    foreign_percent = round(100 * foreign_prop, 3)
+  ) %>%
+  select(language, foreign_percent)
+
+language_foreign_stats
+
 ################################################################################
 
 ## Model construction - not needed for milestone report but note main plans/goals
