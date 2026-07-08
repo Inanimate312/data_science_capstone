@@ -158,31 +158,6 @@ language_summary <- map2_df(paths, names(paths), function(files, language) {
 })
 language_summary
 
-
-# Plot frequencies
-### 2. Scatterplots of Frequency Distributions
-unigram_ranks <- unigrams %>%
-  group_by(language) %>%
-  arrange(desc(freq)) %>%
-  mutate(rank = row_number())
-
-ggplot(
-  unigram_ranks,
-  aes(x = rank, y = freq)
-) +
-  geom_point(alpha = 0.5, size = 0.8) +
-  scale_x_log10() +
-  scale_y_log10() +
-  facet_wrap(~language, scales = "free") +
-  labs(
-    title = "Word Frequency Scatterplots by Language",
-    x = "Rank (log scale)",
-    y = "Frequency (log scale)"
-  ) +
-  theme_minimal()
-
-
-
 library(ggplot2)
 
 unigrams %>%
@@ -338,3 +313,13 @@ for (i in 1:1000) {
   predict_next_word("this is", "english", trigram_model, bigram_model, unigrams)
 }
 Rprof(NULL)
+
+
+## Quiz 3
+predict_next_word(history = "the guy in front of me just bought a pound of bacon, a bouquet, and a case of",
+                  language = "english",
+                  trigram_model,
+                  bigram_model,
+                  unigrams,
+                  top_n = 3
+                  )
