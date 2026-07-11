@@ -12,7 +12,7 @@ function(input, output, session) {
       
       predict_next_word(
         history = input$user_text,
-        top_n = 5,
+        top_n = 1,
         fivegram_lookup = model$fivegram_lookup,
         fourgram_lookup = model$fourgram_lookup,
         trigram_lookup = model$trigram_lookup,

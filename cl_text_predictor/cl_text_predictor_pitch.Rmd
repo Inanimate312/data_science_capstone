@@ -1,0 +1,32 @@
+---
+title: 'Coursera Data Science Capstone: SwiftKey Text Predictor Pitch Deck'
+author: "Chris Luchterhand"
+date: "2026-07-11"
+output: ioslides_presentation
+---
+## Introduction
+This presentation demonstrates an interactive next-word English text prediction application built using Shiny in R. The application presents an exciting opportunity to automate user text communication.
+
+Coursera/Swiftkey Text Predictor: https://clshiny.shinyapps.io/cl_text_predictor/
+
+## Application Description
+- The Coursera/Swiftkey Text Predictor application is a simple Shiny application built using R.
+- The application user interface includes brief instructions on using the app, a field for user text entry, and a submission button. 
+- The user enters English text into the field, presses submit, and the most likely word predicted by the algorithm is displayed on the screen. 
+- The application can be easily modified to show more than one prediction at a time (e.g., the top five predicted words).
+
+## Algorithm Description
+- The text-prediction algorithm is a statistical n-gram model built using English-language text data sourced from SwiftKey's corpus of news, blog, and Twitter text.
+- The algorithm is trained on a random sample of 300,000 lines of text per source file (millions of words in total). 
+- When a user enters text, the model searches for previously observed word patterns and predicts the most probable next word using a backoff strategy that prioritizes longer phrase matches.
+
+## Evaluation Results
+- The Courserea/Swiftkey Text Predictor prioritizes the user experience and aims to balance predictive accuracy with processing speed:
+ - The model performs approximately 1,000 predictions in 14 seconds (about 14 milliseconds per prediction), prioritizing responsiveness and speed. 
+ - Accuracy tests show that the model predicted the correct word as its top match 12.7% of the time, as one of the top three matches 20.2% of the time, and as the top 5 matches 23.8% of the time. 
+- These results highlight the model's utility as a lightweight application that provides near-instant predictions after loading while maintaining useful next-word suggestions.
+
+## Conclusion
+- The Coursera/Swiftkey Text Predictor is built entirely in R using Shiny.
+- The predictive algorithm is trained on real-world English text from blogs, news, and social media, using an efficient n-gram backoff model for next-word prediction.
+- The app demonstrates how statistical language models can provide responsive predictive text with modest computational requirements.

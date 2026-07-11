@@ -1,0 +1,13 @@
+name: cl_text_predictor
+title: cl_text_predictor
+username: clshiny
+account: clshiny
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17603224
+bundleId: 12254638
+url: https://clshiny.shinyapps.io/cl_text_predictor/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: cl_text_predictor_pitch.html|cl_text_predictor_pitch.Rmd
