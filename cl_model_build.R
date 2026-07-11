@@ -70,7 +70,7 @@ all_corpus <- bind_rows(
     function(f) {
       
       tibble(
-        text = sample_lines(f, 500000)
+        text = sample_lines(f, 300000)
       )
       
     }
@@ -206,8 +206,11 @@ build_ngram_freq <- function(text_vector, n) {
 # Build 2-5 Grams, run frequency pruning, and split N-grams
 ################################################################################
 
+# Bigrams
 bigrams   <- build_ngram_freq(corpus$text_clean, 2)
+
 bigrams   <- filter(bigrams,   freq >= 2)
+
 bigrams_split <- bigrams %>%
   separate(
     ngram,
@@ -216,11 +219,22 @@ bigrams_split <- bigrams %>%
     remove = TRUE
   )
 
+bigrams_split <- bigrams_split %>%
+  filter(
+    !str_to_lower(w2) %in% c(
+      "starttoken",
+      "endtoken"
+    )
+  )
+
 rm(bigrams)
 gc()
 
+# Trigrams
 trigrams  <- build_ngram_freq(corpus$text_clean, 3)
+
 trigrams  <- filter(trigrams,  freq >= 2)
+
 trigrams_split <- trigrams %>%
   separate(
     ngram,
@@ -229,11 +243,22 @@ trigrams_split <- trigrams %>%
     remove = TRUE
   )
 
+trigrams_split <- trigrams_split %>%
+  filter(
+    !str_to_lower(w3) %in% c(
+      "starttoken",
+      "endtoken"
+    )
+  )
+
 rm(trigrams)
 gc()
 
+# Fourgrams
 fourgrams <- build_ngram_freq(corpus$text_clean, 4)
+
 fourgrams <- filter(fourgrams, freq >= 2)
+
 fourgrams_split <- fourgrams %>%
   separate(
     ngram,
@@ -242,17 +267,36 @@ fourgrams_split <- fourgrams %>%
     remove = TRUE
   )
 
+fourgrams_split <- fourgrams_split %>%
+  filter(
+    !str_to_lower(w4) %in% c(
+      "starttoken",
+      "endtoken"
+    )
+  )
+
 rm(fourgrams)
 gc()
 
+# Fivegrams
 fivegrams <- build_ngram_freq(corpus$text_clean, 5)
+
 fivegrams <- filter(fivegrams, freq >= 2)
+
 fivegrams_split <- fivegrams %>%
   separate(
     ngram,
     into = c("w1","w2","w3","w4","w5"),
     sep = "\\s+",
     remove = TRUE
+  )
+
+fivegrams_split <- fivegrams_split %>%
+  filter(
+    !str_to_lower(w5) %in% c(
+      "starttoken",
+      "endtoken"
+    )
   )
 
 rm(fivegrams)
